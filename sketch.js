@@ -1,10 +1,18 @@
 var img;
 var myPixels = [];
 var stipples = [];
+var imgDots = [];
 var stopped = false;
+var packDensity = .95;
+var section = 0;
+var horizontalDiv = 100;
+var verticalDiv = 25;
+var horizontalSections;
+var verticalSections;
+var totalSections;
 
 function preload() {
-  img = loadImage("test.jpg");
+  img = loadImage("zebra.jpg");
 }
 function setup() {
   createCanvas(img.width, img.height);
@@ -22,10 +30,16 @@ function setup() {
       myPixels[index] = constrain(brightness, 0, 255);
     }
   }
+  horizontalSections = floor(img.width / horizontalDiv);
+  verticalSections = floor(img.height/ verticalDiv);
+  totalSections = horizontalSections * verticalSections;
+  console.log("Total Sections" + totalSections);
+  sectionHandler(0);
 }
 
-function draw() {
-  background(255);
+
+function sectionHandler(section) {
+  //background(255);
   // Uncomment the below text to show the base image
   // loadPixels();
   // for (var x = 0; x < width; x++) {
@@ -39,36 +53,62 @@ function draw() {
   //   }
   // }
   // updatePixels();
+  if (section < totalSections) {
+    var oldX = (section % horizontalSections) * horizontalDiv;
+    var oldY = floor(section / horizontalSections) * verticalDiv;
+    // var oldX = ((section - 1) % horizontalSections + 1) * horizontalDiv + 1;
+    // var oldY = floor((section - 1) / horizontalSections + 1) * verticalDiv + 1;
+    var callX = oldX + horizontalDiv;
+    var callY = oldY + verticalDiv;
+    generateStipples(oldX, oldY, callX, callY);
+  } else if (section == totalSections) {
+    var oldX = ((section - 1) % horizontalSections + 1) * horizontalDiv + 1;
+    var oldY = floor((section - 1) / horizontalSections + 1) * verticalDiv + 1;
+    generateStipples(0, oldY, img.width, img.height);
+    generateStipples(oldX, 0, img.width, oldY);
+  } else {
+    background(255);
+    for (var i = 0; i < imgDots.length; i++) {
+      imgDots[i].update();
+    }
+  }
 
+}
 
+function generateStipples(oldX, oldY, callX, callY) {
+  var finished = false;
+  while (!finished) {
+    var target = 100;
+    var count = 0;
+    for (var i = 0; i < target; i++) {
+      if (addStipple(oldX, oldY, callX, callY)) {
+        count++;
+      }
+      if (count == target) {
+        break;
+      }
+    }
+    if (count <= (target + 1 - packDensity * target)) {
+      finished = true;
+    }
+  }
+  section += 1;
   for (var i = 0; i < stipples.length; i++) {
-    stipples[i].update();
+    imgDots.push(stipples[i]);
   }
-
-  var target = 1 + constrain(floor(frameCount / 120), 0, 20);
-  var count = 0;
-  for (var i = 0; i < 1000; i++) {
-    if (addStipple()) {
-      count++;
-    }
-    if (count == target) {
-      break;
-    }
-  }
-
-  if (count < 1) {
-    noLoop();
-    console.log("finished");
+  stipples = [];
+  if (section != (totalSections + 1)) {
+    console.log("Section:" + section);
+    sectionHandler(section);
   }
 }
 
-
-function addStipple() {
-  var newX = floor(random(width));
-  var newY = floor(random(height));
+function addStipple(oldX, oldY, callX, callY) {
+  var newX = floor(random(oldX, callX));
+  var newY = floor(random(oldY, callY));
   var index = (newX + newY * width);
   var brightness = myPixels[index];
-  var newSize = map(brightness, 0, 255, .01, 10);
+  var newSize = map(brightness, 0, 255, .1, 15);
   var newStipple = new Stipple(newX, newY, newSize);
 
   if (brightness < 250) {
@@ -108,6 +148,6 @@ function Stipple(x, y, size) {
   this.update = function() {
     fill(0, 0, 0);
     noStroke();
-    ellipse(this.x, this.y, 1.5, 1.5);
+    ellipse(this.x, this.y, 2.5, 2.5);
   }
 }
